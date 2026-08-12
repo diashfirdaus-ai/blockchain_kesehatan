@@ -4,13 +4,6 @@ app/node_modules/
 package-lock.json
 .pnpm-store/
 
-# ─── Database & Local Storage (Runtime) ─────────────────────
-*.db
-*.db-journal
-*.sqlite
-*.sqlite3
-app/database/*.db
-
 # ─── Environment & Secrets ───────────────────────────────────
 .env
 .env.local

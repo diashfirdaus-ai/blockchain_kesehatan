@@ -13,19 +13,16 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static frontend files (app/public)
-app.use(express.static(path.join(__dirname, "..", "app", "public")));
-
 let dbPromise = null;
-let blockchain = null;
+let blockchainInstance = null;
 
 async function setupApp() {
     if (!dbPromise) {
         dbPromise = (async () => {
             const db = await initDatabase();
-            blockchain = new Blockchain(db);
+            blockchainInstance = new Blockchain(db);
             app.locals.db = db;
-            app.locals.blockchain = blockchain;
+            app.locals.blockchain = blockchainInstance;
         })();
     }
     await dbPromise;
@@ -37,30 +34,8 @@ app.use(async (req, res, next) => {
         await setupApp();
         next();
     } catch (err) {
-        console.error("[Vercel Serverless Error]", err);
+        console.error("[Vercel DB Error]", err);
         next(err);
-    }
-});
-
-// Reset route
-app.post("/api/simulation/reset", (req, res) => {
-    try {
-        const db = req.app.locals.db;
-        const blockchainInstance = req.app.locals.blockchain;
-
-        db.prepare("DELETE FROM drug_transactions").run();
-        db.prepare("DELETE FROM drugs").run();
-        db.prepare("DELETE FROM blockchain_blocks WHERE block_index > 0").run();
-
-        blockchainInstance.restoreChain();
-
-        res.json({
-            success: true,
-            message: "Semua data simulasi berhasil dihapus. Blockchain dikembalikan ke genesis block.",
-            genesisOnly: true,
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -74,14 +49,39 @@ app.get("/api/penjelasan", (req, res) => {
     }
 });
 
+// Reset route
+app.post("/api/simulation/reset", (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const bc = req.app.locals.blockchain;
+
+        db.prepare("DELETE FROM drug_transactions").run();
+        db.prepare("DELETE FROM drugs").run();
+        db.prepare("DELETE FROM blockchain_blocks WHERE block_index > 0").run();
+
+        bc.restoreChain();
+
+        res.json({
+            success: true,
+            message: "Semua data simulasi berhasil dihapus. Blockchain dikembalikan ke genesis block.",
+            genesisOnly: true,
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Sub-routes
 app.use("/api/users", require("../app/routes/users"));
 app.use("/api/drugs", require("../app/routes/drugs"));
 app.use("/api/blockchain", require("../app/routes/blockchain"));
 
-// Fallback serve index.html untuk semua route non-API / frontend
-app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "..", "app", "public", "index.html"));
+// Root API
+app.get("/api", (req, res) => {
+    res.json({
+        message: "Healthcare Blockchain API",
+        version: "1.0.0"
+    });
 });
 
 // Error handler
