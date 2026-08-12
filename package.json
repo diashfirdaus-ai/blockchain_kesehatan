@@ -2,7 +2,7 @@
   "name": "blockchain-kesehatan",
   "version": "1.0.0",
   "description": "Simulasi Aplikasi Blockchain di Bidang Kesehatan - Sistem Pencatatan dan Verifikasi Riwayat Distribusi Obat",
-  "main": "app/server.js",
+  "main": "api/index.js",
   "scripts": {
     "start": "node app/server.js",
     "dev": "node app/server.js"
