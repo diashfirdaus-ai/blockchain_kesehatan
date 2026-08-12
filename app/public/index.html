@@ -45,6 +45,9 @@
       <button class="nav-link" onclick="navigate('penjelasan')" id="nav-penjelasan">
         📚 <span>Penjelasan Materi</span>
       </button>
+      <button class="nav-link" onclick="navigate('ethpublic')" id="nav-ethpublic">
+        🌐 <span>Ethereum Publik</span>
+      </button>
     </nav>
 
     <div class="nav-status valid" id="chain-status-badge">
@@ -722,6 +725,162 @@
           <div class="empty-state"><div class="spinner" style="width:40px;height:40px;border-width:3px;"></div><p style="margin-top:1rem;">Memuat materi penjelasan...</p></div>
         </div>
       </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: ETHEREUM PUBLIC BLOCKCHAIN SIMULATION
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-ethpublic">
+      <div class="page-header">
+        <h1>🌐 Simulasi Ethereum Blockchain Publik</h1>
+        <p>Visualisasi skala nyata Ethereum mainnet — ribuan block baru setiap jam, jutaan transaksi per hari</p>
+      </div>
+
+      <!-- ── Hero Stats Bar ─────────────────────────────────────────────── -->
+      <div class="eth-stats-bar" id="eth-stats-bar">
+        <div class="eth-stat-item">
+          <span class="eth-stat-label">Block Terbaru</span>
+          <span class="eth-stat-value" id="eth-live-block">20,843,912</span>
+        </div>
+        <div class="eth-stat-item">
+          <span class="eth-stat-label">Gas Price (Gwei)</span>
+          <span class="eth-stat-value" id="eth-gas">12.4</span>
+        </div>
+        <div class="eth-stat-item">
+          <span class="eth-stat-label">Waktu/Block</span>
+          <span class="eth-stat-value">~12 detik</span>
+        </div>
+        <div class="eth-stat-item">
+          <span class="eth-stat-label">Total Validator</span>
+          <span class="eth-stat-value">1,047,382</span>
+        </div>
+        <div class="eth-stat-item">
+          <span class="eth-stat-label">Total Transaksi</span>
+          <span class="eth-stat-value" id="eth-total-tx">2,441,823,091</span>
+        </div>
+        <div class="eth-stat-item eth-stat-live">
+          <span class="eth-live-dot"></span>
+          <span>LIVE SIMULATION</span>
+        </div>
+      </div>
+
+      <!-- ── Perbandingan: Simulasi vs Ethereum ─────────────────────────── -->
+      <div class="eth-compare-grid">
+        <div class="card eth-compare-card eth-compare-sim">
+          <div class="eth-compare-icon">🔬</div>
+          <h3>Simulasi Kita</h3>
+          <div class="eth-compare-rows">
+            <div class="eth-compare-row">
+              <span>Jumlah Block</span>
+              <strong id="eth-compare-ourblocks">19 block</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Pengguna</span>
+              <strong>6 aktor</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Jaringan</span>
+              <strong>Private / Lokal</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Konsensus</span>
+              <strong>Proof of Work (PoW)</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Tujuan</span>
+              <strong>Pembelajaran</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="eth-compare-vs">VS</div>
+
+        <div class="card eth-compare-card eth-compare-eth">
+          <div class="eth-compare-icon">🌐</div>
+          <h3>Ethereum Mainnet</h3>
+          <div class="eth-compare-rows">
+            <div class="eth-compare-row">
+              <span>Jumlah Block</span>
+              <strong id="eth-compare-ethblocks">20,843,912+</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Pengguna</span>
+              <strong>~250 Juta wallet</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Jaringan</span>
+              <strong>Publik / Global</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Konsensus</span>
+              <strong>Proof of Stake (PoS)</strong>
+            </div>
+            <div class="eth-compare-row">
+              <span>Tujuan</span>
+              <strong>DeFi, NFT, Smart Contract</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Live Block Feed ────────────────────────────────────────────── -->
+      <div style="display:grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start;">
+
+        <div class="card">
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
+            <h2 style="margin:0; font-size:1rem;">⛓️ Live Block Feed — Ethereum Mainnet (Simulasi)</h2>
+            <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; color:#10b981;">
+              <span class="eth-live-dot" style="width:8px;height:8px;"></span> Block baru setiap ~12 detik
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="eth-block-feed" id="eth-block-feed">
+              <!-- JS akan mengisi ini -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Side Panel: Penjelasan ──────────────────────────────────── -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+
+          <div class="card eth-edu-card">
+            <div class="eth-edu-icon">💡</div>
+            <h4>Mengapa Ada Jutaan Block?</h4>
+            <p>Ethereum menghasilkan 1 block setiap ~12 detik. Dalam 1 hari ada ±7.200 block baru. Sejak 2015, sudah terkumpul lebih dari 20 juta block — semua tersimpan permanen di jaringan global.</p>
+          </div>
+
+          <div class="card eth-edu-card">
+            <div class="eth-edu-icon">🔒</div>
+            <h4>Mengapa Tidak Bisa Diubah?</h4>
+            <p>Setiap block menyimpan hash block sebelumnya. Jika 1 block diubah, seluruh chain di belakangnya menjadi invalid — dan semua validator di seluruh dunia akan menolaknya.</p>
+          </div>
+
+          <div class="card eth-edu-card">
+            <div class="eth-edu-icon">⚡</div>
+            <h4>Slot & Epoch di PoS</h4>
+            <p>Setelah The Merge (2022), Ethereum beralih ke Proof of Stake. Setiap 12 detik = 1 slot. Setiap 32 slot = 1 epoch. Validator dipilih secara acak untuk mengusulkan block berikutnya.</p>
+          </div>
+
+          <div class="card eth-edu-card" style="background: linear-gradient(135deg, #1e3a5f, #0f2340); border-color: #1d4ed8;">
+            <div class="eth-edu-icon">📊</div>
+            <h4 style="color:#93c5fd;">Simulasi Kita vs Ethereum</h4>
+            <p style="color:#94a3b8;">Simulasi kita adalah versi kecil yang berjalan di 1 server lokal. Ethereum berjalan di lebih dari 10.000 node tersebar di seluruh dunia — tidak ada satu pun yang bisa mematikannya.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Block Detail Modal Trigger ─────────────────────────────────── -->
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="card-header"><h2 style="margin:0;font-size:1rem;">🔗 Visualisasi Rantai Block (Chain)</h2></div>
+        <div class="card-body">
+          <div class="eth-chain-vis" id="eth-chain-vis">
+            <!-- JS mengisi 8 block terakhir secara horizontal -->
+          </div>
+          <p style="font-size:0.8rem; color:#64748b; text-align:center; margin-top:0.75rem;">← Block lama &nbsp;&nbsp;&nbsp;&nbsp; Block baru →</p>
+        </div>
+      </div>
+
     </section>
 
   </main>

@@ -152,6 +152,7 @@ function navigate(page) {
     case "tamper":      break;
     case "contract":    renderSolidityCode(); break;
     case "penjelasan":  loadPenjelasanPage(); break;
+    case "ethpublic":   loadEthPublicPage(); break;
   }
 }
 
@@ -1515,3 +1516,225 @@ document.addEventListener("DOMContentLoaded", () => {
   // Auto-refresh status setiap 30 detik
   setInterval(updateChainStatusBadge, 30_000);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ETHEREUM PUBLIC BLOCKCHAIN — SIMULATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Constants & state ──────────────────────────────────────────────────────────
+const ETH_BASE_BLOCK    = 20_843_912;
+const ETH_BLOCK_TIME_MS = 12_000;
+const ETH_BASE_TX       = 2_441_823_091;
+
+const ETH_VALIDATORS = [
+  "0xBeast...4f3A", "0xLido...7c21",  "0xRocket...a8E3",
+  "0xCoinbase...91Ff", "0xKrakenPool...B2d1", "0xBinance...5e8A",
+  "0xFlashbots...3cD4", "0xAntPool...99Aa", "0xMevBoost...12Fe",
+  "0xP2P...5f4B", "0xAllnodes...8aE2", "0xStaked...C3d7",
+];
+
+let ethPageState = {
+  currentBlock : ETH_BASE_BLOCK,
+  totalTx      : ETH_BASE_TX,
+  blocks       : [],
+  timer        : null,
+  initialized  : false,
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function ethRandHex(len) {
+  let s = "0x";
+  const c = "0123456789abcdef";
+  for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+  return s;
+}
+function ethRandInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function ethFmt(n) { return Number(n).toLocaleString("id-ID"); }
+function ethAbbrevHash(h) { return h.slice(0, 10) + "..." + h.slice(-6); }
+function ethMakeBlock(blockNum, isNew = false) {
+  return {
+    num     : blockNum,
+    hash    : ethRandHex(64),
+    miner   : ETH_VALIDATORS[Math.floor(Math.random() * ETH_VALIDATORS.length)],
+    txCount : ethRandInt(90, 320),
+    gasUsed : ethRandInt(9_000_000, 29_000_000),
+    ts      : isNew ? Date.now() : (Date.now() - (ETH_BASE_BLOCK - blockNum) * 12_000),
+    isNew,
+  };
+}
+
+// ── Block feed ─────────────────────────────────────────────────────────────────
+function ethRenderFeed(prependNew = null) {
+  const feed = document.getElementById("eth-block-feed");
+  if (!feed) return;
+
+  if (!prependNew) {
+    feed.innerHTML = `
+      <div class="eth-feed-header">
+        <span>Block #</span><span>Hash</span><span>Validator</span>
+        <span style="text-align:center">Tx</span><span style="text-align:right">Waktu</span>
+      </div>`;
+    ethPageState.blocks.forEach((b, idx) => feed.appendChild(ethBuildFeedRow(b, idx === 0)));
+    return;
+  }
+
+  const header = feed.querySelector(".eth-feed-header");
+  feed.insertBefore(ethBuildFeedRow(prependNew, true), header ? header.nextSibling : feed.firstChild);
+  const rows = feed.querySelectorAll(".eth-feed-row");
+  if (rows.length > 40) rows[rows.length - 1].remove();
+}
+
+function ethBuildFeedRow(b, isNew = false) {
+  const row = document.createElement("div");
+  row.className = "eth-feed-row" + (isNew ? " eth-row-new" : "");
+  row.innerHTML = `
+    <span class="eth-block-num">#${ethFmt(b.num)}</span>
+    <span class="eth-block-hash">${ethAbbrevHash(b.hash)}</span>
+    <span class="eth-block-miner">${b.miner}</span>
+    <span class="eth-block-txcount">${b.txCount} tx</span>
+    <span class="eth-block-age" data-ts="${b.ts}">${isNew ? "baru saja" : ethAgeText(b.ts)}</span>`;
+  row.onclick = () => ethShowBlockDetail(b);
+  return row;
+}
+
+function ethAgeText(ts) {
+  if (!ts) return "—";
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 60)   return sec + "d lalu";
+  if (sec < 3600) return Math.floor(sec / 60) + "m lalu";
+  return Math.floor(sec / 3600) + "j lalu";
+}
+
+// ── Chain visualizer ───────────────────────────────────────────────────────────
+function ethRenderChainVis(highlightLatest = false) {
+  const vis = document.getElementById("eth-chain-vis");
+  if (!vis) return;
+
+  const shown = ethPageState.blocks.slice(0, 7).reverse();
+  vis.innerHTML = "";
+
+  // Genesis
+  const genesis = document.createElement("div");
+  genesis.className = "eth-chain-block";
+  genesis.innerHTML = `<div class="eth-chain-block-box" style="border-color:#7c3aed;">
+    <div class="eth-chain-block-num" style="color:#c4b5fd;">Genesis</div>
+    <div class="eth-chain-block-txs">#0</div>
+    <div class="eth-chain-block-hash">0x0000...0000</div></div>`;
+  vis.appendChild(genesis);
+
+  // Ellipsis (millions of blocks)
+  const dots = document.createElement("span");
+  dots.className = "eth-chain-dots";
+  dots.textContent = "···";
+  vis.appendChild(dots);
+
+  shown.forEach((b, idx) => {
+    const arrow = document.createElement("span");
+    arrow.className = "eth-chain-arrow";
+    arrow.textContent = "→";
+    vis.appendChild(arrow);
+
+    const isLatest = highlightLatest && idx === shown.length - 1;
+    const wrap = document.createElement("div");
+    wrap.className = "eth-chain-block";
+    const box = document.createElement("div");
+    box.className = "eth-chain-block-box" + (isLatest ? " eth-chain-new" : "");
+    box.innerHTML = `
+      <div class="eth-chain-block-num">#${ethFmt(b.num)}</div>
+      <div class="eth-chain-block-txs">${b.txCount} tx</div>
+      <div class="eth-chain-block-hash">${ethAbbrevHash(b.hash)}</div>`;
+    box.onclick = () => ethShowBlockDetail(b);
+    wrap.appendChild(box);
+    vis.appendChild(wrap);
+  });
+}
+
+// ── Block detail modal ─────────────────────────────────────────────────────────
+function ethShowBlockDetail(b) {
+  const title = document.getElementById("modal-block-title");
+  const body  = document.getElementById("modal-block-body");
+  if (!title || !body) return;
+
+  title.textContent = `Block #${ethFmt(b.num)} — Ethereum Mainnet (Simulasi)`;
+  body.innerHTML = `
+    <table class="detail-table">
+      <tr><td>Block Number</td><td><code>${ethFmt(b.num)}</code></td></tr>
+      <tr><td>Hash</td><td><code style="word-break:break-all;font-size:0.78rem;">${b.hash}</code></td></tr>
+      <tr><td>Parent Hash</td><td><code style="word-break:break-all;font-size:0.78rem;">${ethRandHex(64)}</code></td></tr>
+      <tr><td>Validator</td><td><code>${b.miner}</code></td></tr>
+      <tr><td>Jumlah Transaksi</td><td><strong>${b.txCount} transaksi</strong></td></tr>
+      <tr><td>Gas Used</td><td>${ethFmt(b.gasUsed)} / 30,000,000</td></tr>
+      <tr><td>Gas Utilization</td><td>${((b.gasUsed / 30_000_000) * 100).toFixed(1)}%</td></tr>
+      <tr><td>Slot (PoS)</td><td>${ethFmt(b.num * 3 + 1)}</td></tr>
+      <tr><td>Epoch</td><td>${Math.floor(b.num * 3 / 32).toLocaleString("id-ID")}</td></tr>
+      <tr><td>Timestamp</td><td>${new Date(b.ts).toLocaleString("id-ID")}</td></tr>
+    </table>
+    <div class="alert alert-info" style="margin-top:1rem;font-size:0.83rem;">
+      💡 <strong>Catatan Edukasi:</strong> Setiap block menyimpan <em>Parent Hash</em> dari block sebelumnya.
+      Jika satu block diubah, hash-nya berubah dan seluruh chain setelahnya menjadi invalid —
+      sehingga tidak mungkin memalsukan data tanpa terdeteksi oleh 1.000.000+ validator.
+    </div>`;
+
+  document.getElementById("modal-block").classList.remove("hidden");
+}
+
+// ── Live ticker ────────────────────────────────────────────────────────────────
+function ethUpdateStats() {
+  const blockEl  = document.getElementById("eth-live-block");
+  const txEl     = document.getElementById("eth-total-tx");
+  const gasEl    = document.getElementById("eth-gas");
+  const cmpEthEl = document.getElementById("eth-compare-ethblocks");
+  const cmpOurEl = document.getElementById("eth-compare-ourblocks");
+
+  if (blockEl)  blockEl.textContent  = ethFmt(ethPageState.currentBlock);
+  if (txEl)     txEl.textContent     = ethFmt(ethPageState.totalTx);
+  if (cmpEthEl) cmpEthEl.textContent = ethFmt(ethPageState.currentBlock) + "+";
+  if (gasEl)    gasEl.textContent    = (11 + Math.random() * 6).toFixed(1) + " Gwei";
+
+  if (cmpOurEl) {
+    fetch(API + "/api/blockchain")
+      .then(r => r.json())
+      .then(d => { if (d.success && d.data && d.data.chain) cmpOurEl.textContent = d.data.chain.length + " block"; })
+      .catch(() => {});
+  }
+}
+
+function ethTickNewBlock() {
+  if (currentPage !== "ethpublic") return;
+
+  ethPageState.currentBlock++;
+  ethPageState.totalTx += ethRandInt(120, 350);
+
+  const nb = ethMakeBlock(ethPageState.currentBlock, true);
+  ethPageState.blocks.unshift(nb);
+  if (ethPageState.blocks.length > 100) ethPageState.blocks.pop();
+
+  ethUpdateStats();
+  ethRenderFeed(nb);
+  ethRenderChainVis(true);
+
+  // Refresh age labels
+  document.querySelectorAll(".eth-block-age[data-ts]").forEach(el => {
+    const ts = parseInt(el.dataset.ts);
+    if (ts > 0) el.textContent = ethAgeText(ts);
+  });
+}
+
+// ── Page entry point ───────────────────────────────────────────────────────────
+function loadEthPublicPage() {
+  if (!ethPageState.initialized) {
+    for (let i = 0; i < 30; i++) {
+      ethPageState.blocks.push(ethMakeBlock(ETH_BASE_BLOCK - i, false));
+    }
+    ethPageState.initialized = true;
+  }
+
+  ethUpdateStats();
+  ethRenderFeed();
+  ethRenderChainVis();
+
+  clearInterval(ethPageState.timer);
+  ethPageState.timer = setInterval(ethTickNewBlock, ETH_BLOCK_TIME_MS);
+}
