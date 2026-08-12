@@ -22,13 +22,11 @@ async function startServer() {
     // Static files (frontend)
     app.use(express.static(path.join(__dirname, "public")));
 
-    // ─── Pastikan folder database ada (Safe for Vercel) ────────────────────────
-    try {
-        const dbFolder = path.join(__dirname, "database");
-        if (!fs.existsSync(dbFolder)) {
-            fs.mkdirSync(dbFolder, { recursive: true });
-        }
-    } catch (_) {}
+    // ─── Pastikan folder database ada ──────────────────────────────────────────
+    const dbFolder = path.join(__dirname, "database");
+    if (!fs.existsSync(dbFolder)) {
+        fs.mkdirSync(dbFolder, { recursive: true });
+    }
 
     // ─── Inisialisasi Database ──────────────────────────────────────────────────
     console.log("=".repeat(60));
@@ -48,30 +46,30 @@ async function startServer() {
     app.locals.blockchain = blockchain;
 
     // ─── Simulation Reset Route ───────────────────────────────────────────────
-  app.post("/api/simulation/reset", (req, res) => {
-      try {
-          const db         = req.app.locals.db;
-          const blockchain = req.app.locals.blockchain;
+    app.post("/api/simulation/reset", (req, res) => {
+        try {
+            const db = req.app.locals.db;
+            const blockchain = req.app.locals.blockchain;
 
-          // Hapus semua transaksi, obat, dan blocks (kecuali genesis)
-          db.prepare("DELETE FROM drug_transactions").run();
-          db.prepare("DELETE FROM drugs").run();
-          db.prepare("DELETE FROM blockchain_blocks WHERE block_index > 0").run();
+            // Hapus semua transaksi, obat, dan blocks (kecuali genesis)
+            db.prepare("DELETE FROM drug_transactions").run();
+            db.prepare("DELETE FROM drugs").run();
+            db.prepare("DELETE FROM blockchain_blocks WHERE block_index > 0").run();
 
-          // Reset chain di memori ke genesis saja
-          blockchain.restoreChain();
+            // Reset chain di memori ke genesis saja
+            blockchain.restoreChain();
 
-          res.json({
-              success: true,
-              message: "Semua data simulasi berhasil dihapus. Blockchain dikembalikan ke genesis block.",
-              genesisOnly: true,
-          });
-      } catch (err) {
-          res.status(500).json({ success: false, message: err.message });
-      }
-  });
+            res.json({
+                success: true,
+                message: "Semua data simulasi berhasil dihapus. Blockchain dikembalikan ke genesis block.",
+                genesisOnly: true,
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: err.message });
+        }
+    });
 
-  // ─── Routes ──────────────────────────────────────────────────────────────
+    // ─── Routes ──────────────────────────────────────────────────────────────
     app.use("/api/users", require("./routes/users"));
     app.use("/api/drugs", require("./routes/drugs"));
     app.use("/api/blockchain", require("./routes/blockchain"));

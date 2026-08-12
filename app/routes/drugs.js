@@ -25,6 +25,34 @@ router.get("/", (req, res) => {
     }
 });
 
+// GET /api/drugs/stats/summary — statistik ringkasan dashboard (Wajib di atas /:code)
+router.get("/stats/summary", (req, res) => {
+    try {
+        const db           = req.app.locals.db;
+        const totalDrugs   = db.prepare("SELECT COUNT(*) as cnt FROM drugs").get().cnt;
+        const totalTx      = db.prepare("SELECT COUNT(*) as cnt FROM drug_transactions").get().cnt;
+        const totalBlocks  = db.prepare("SELECT COUNT(*) as cnt FROM blockchain_blocks").get().cnt;
+        const totalUsers   = db.prepare("SELECT COUNT(*) as cnt FROM users").get().cnt;
+        const recentTx     = db.prepare(`
+            SELECT dt.id, dt.action, dt.location, dt.created_at,
+                   u.name as actor_name,
+                   d.drug_name, d.drug_code
+            FROM drug_transactions dt
+            JOIN users u ON dt.actor_id = u.id
+            JOIN drugs d ON dt.drug_id = d.id
+            ORDER BY dt.created_at DESC
+            LIMIT 5
+        `).all();
+
+        res.json({
+            success: true,
+            data: { totalDrugs, totalTx, totalBlocks, totalUsers, recentTx },
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // GET /api/drugs/:code — detail obat
 router.get("/:code", (req, res) => {
     try {
@@ -219,34 +247,6 @@ router.post("/:code/transactions", (req, res) => {
                 hash:         newBlock.hash,
                 previousHash: newBlock.previousHash,
             },
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-// GET /api/drugs/stats/summary — statistik ringkasan
-router.get("/stats/summary", (req, res) => {
-    try {
-        const db           = req.app.locals.db;
-        const totalDrugs   = db.prepare("SELECT COUNT(*) as cnt FROM drugs").get().cnt;
-        const totalTx      = db.prepare("SELECT COUNT(*) as cnt FROM drug_transactions").get().cnt;
-        const totalBlocks  = db.prepare("SELECT COUNT(*) as cnt FROM blockchain_blocks").get().cnt;
-        const totalUsers   = db.prepare("SELECT COUNT(*) as cnt FROM users").get().cnt;
-        const recentTx     = db.prepare(`
-            SELECT dt.id, dt.action, dt.location, dt.created_at,
-                   u.name as actor_name,
-                   d.drug_name, d.drug_code
-            FROM drug_transactions dt
-            JOIN users u ON dt.actor_id = u.id
-            JOIN drugs d ON dt.drug_id = d.id
-            ORDER BY dt.created_at DESC
-            LIMIT 5
-        `).all();
-
-        res.json({
-            success: true,
-            data: { totalDrugs, totalTx, totalBlocks, totalUsers, recentTx },
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
