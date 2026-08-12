@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Healthcare Blockchain — Simulasi Distribusi Obat</title>
+  <meta name="description" content="Simulasi aplikasi blockchain bidang kesehatan untuk pembelajaran mahasiswa. Sistem pencatatan dan verifikasi riwayat distribusi obat menggunakan custom blockchain, SQLite, dan Node.js." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ NAVBAR ═══════════════════════════════════════════════════════════ -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="#" onclick="navigate('dashboard'); return false;">
+      <div class="brand-icon">⛓️</div>
+      <span>Healthcare Blockchain</span>
+    </a>
+
+    <nav class="navbar-nav">
+      <button class="nav-link active" onclick="navigate('dashboard')" id="nav-dashboard">
+        🏠 <span>Dashboard</span>
+      </button>
+      <button class="nav-link" onclick="navigate('drugs')" id="nav-drugs">
+        💊 <span>Obat</span>
+      </button>
+      <button class="nav-link" onclick="navigate('transactions')" id="nav-transactions">
+        🔄 <span>Transaksi</span>
+      </button>
+      <button class="nav-link" onclick="navigate('tracing')" id="nav-tracing">
+        🔎 <span>Lacak (Tracing)</span>
+      </button>
+      <button class="nav-link" onclick="navigate('explorer')" id="nav-explorer">
+        🔍 <span>Blockchain Explorer</span>
+      </button>
+      <button class="nav-link" onclick="navigate('verify')" id="nav-verify">
+        ✅ <span>Verifikasi</span>
+      </button>
+      <button class="nav-link" onclick="navigate('tamper')" id="nav-tamper">
+        ⚠️ <span>Demo Tamper</span>
+      </button>
+      <button class="nav-link" onclick="navigate('contract')" id="nav-contract">
+        📜 <span>Smart Contract</span>
+      </button>
+      <button class="nav-link" onclick="navigate('penjelasan')" id="nav-penjelasan">
+        📚 <span>Penjelasan Materi</span>
+      </button>
+    </nav>
+
+    <div class="nav-status valid" id="chain-status-badge">
+      <span class="dot"></span>
+      <span id="chain-status-text">Valid</span>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: DASHBOARD
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1>🏥 Dashboard</h1>
+        <p>Selamat datang di Simulasi Blockchain Kesehatan — Sistem Pelacakan Distribusi Obat</p>
+      </div>
+
+      <!-- Simulation Banner -->
+      <div class="sim-banner">
+        <div class="sim-banner-icon">🚀</div>
+        <div class="sim-banner-text" style="flex:1;">
+          <h3>Simulasikan Alur Distribusi Obat Secara Otomatis</h3>
+          <p>Isi data lengkap: 3 obat + 12 transaksi distribusi secara otomatis untuk demonstrasi</p>
+          <div class="sim-progress" id="sim-progress">
+            <div class="sim-progress-bar"><div class="sim-progress-fill" id="sim-progress-fill"></div></div>
+            <div class="sim-progress-label" id="sim-progress-label">Mempersiapkan simulasi...</div>
+          </div>
+        </div>
+        <div class="sim-banner-actions">
+          <button class="btn-sim-white" onclick="runSimulation()" id="btn-simulate">⚡ Simulasikan</button>
+          <button class="btn-sim-outline" onclick="resetSimulation()" id="btn-reset-sim">🗑️ Reset Data</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue">💊</div>
+          <div class="stat-value" id="stat-drugs">—</div>
+          <div class="stat-label">Total Obat</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">🔄</div>
+          <div class="stat-value" id="stat-tx">—</div>
+          <div class="stat-label">Total Transaksi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">⛓️</div>
+          <div class="stat-value" id="stat-blocks">—</div>
+          <div class="stat-label">Total Block</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">👥</div>
+          <div class="stat-value" id="stat-users">—</div>
+          <div class="stat-label">Total Pengguna</div>
+        </div>
+      </div>
+
+      <!-- Blockchain status bar -->
+      <div class="card mb-3" id="blockchain-status-bar" style="border: 1px solid #e2e8f0;">
+        <div class="card-body" style="display:flex; align-items:center; gap:1rem; padding:1.1rem 1.4rem;">
+          <span style="font-size:1.4rem" id="status-bar-icon">✅</span>
+          <div>
+            <div style="font-weight:700; font-size:0.95rem;" id="status-bar-title">Blockchain Valid</div>
+            <div style="font-size:0.8rem; color:var(--text-secondary);" id="status-bar-msg">Semua block terverifikasi</div>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="navigate('verify')">Lihat Detail →</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Transaksi terbaru -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Transaksi Terbaru</h3>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('transactions')">Lihat Semua →</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="recent-tx-list">
+              <div class="empty-state"><div class="empty-icon">📭</div><h3>Belum ada transaksi</h3></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alur distribusi -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🗺️ Alur Distribusi Obat</h3>
+          </div>
+          <div class="card-body">
+            <div style="display:flex; flex-direction:column; gap:0;">
+              <div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 0;">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--accent-purple-lt);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #c4b5fd;">🏭</div>
+                <div><div style="font-weight:700;color:var(--text-primary);">Produsen</div><div style="font-size:0.8rem;color:var(--text-secondary);">Memproduksi dan mendaftarkan obat</div></div>
+              </div>
+              <div style="padding-left:1.4rem;"><div style="width:2px;height:24px;background:linear-gradient(to bottom,#c4b5fd,var(--border-blue));"></div><div style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">MANUFACTURED → SHIPPED</div></div>
+              <div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 0;">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--accent-blue-lt);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid var(--border-blue);">🚚</div>
+                <div><div style="font-weight:700;color:var(--text-primary);">Distributor</div><div style="font-size:0.8rem;color:var(--text-secondary);">Menerima dan mendistribusikan obat</div></div>
+              </div>
+              <div style="padding-left:1.4rem;"><div style="width:2px;height:24px;background:linear-gradient(to bottom,var(--border-blue),#86efac);"></div><div style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">RECEIVED → DISTRIBUTED</div></div>
+              <div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 0;">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--accent-green-lt);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #86efac;">🏪</div>
+                <div><div style="font-weight:700;color:var(--text-primary);">Apotek</div><div style="font-size:0.8rem;color:var(--text-secondary);">Menerima dan menyerahkan obat</div></div>
+              </div>
+              <div style="padding-left:1.4rem;"><div style="width:2px;height:24px;background:linear-gradient(to bottom,#86efac,#67e8f9);"></div><div style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">DISPENSED</div></div>
+              <div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 0;">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--accent-teal-lt);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #67e8f9;">👤</div>
+                <div><div style="font-weight:700;color:var(--text-primary);">Pasien</div><div style="font-size:0.8rem;color:var(--text-secondary);">Menerima obat dari apotek</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: OBAT
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-drugs">
+      <div class="page-header">
+        <h1>💊 Manajemen Obat</h1>
+        <p>Daftarkan obat baru dan lihat riwayat distribusinya</p>
+      </div>
+
+      <div class="grid-2">
+        <!-- Form tambah obat -->
+        <div class="card">
+          <div class="card-header">
+            <h3>➕ Tambah Obat Baru</h3>
+          </div>
+          <div class="card-body">
+            <form id="form-add-drug" onsubmit="submitAddDrug(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="d-code">Kode Obat *</label>
+                  <input id="d-code" type="text" placeholder="DRG-001" required />
+                </div>
+                <div class="form-group">
+                  <label for="d-batch">Nomor Batch *</label>
+                  <input id="d-batch" type="text" placeholder="PCM-2026-001" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="d-name">Nama Obat *</label>
+                <input id="d-name" type="text" placeholder="Paracetamol 500 mg" required />
+              </div>
+              <div class="form-group">
+                <label for="d-mfr">Produsen</label>
+                <input id="d-mfr" type="text" placeholder="PT Farma Indonesia" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="d-prod">Tanggal Produksi</label>
+                  <input id="d-prod" type="date" />
+                </div>
+                <div class="form-group">
+                  <label for="d-exp">Tanggal Kedaluwarsa</label>
+                  <input id="d-exp" type="date" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="d-loc">Lokasi Produksi</label>
+                <input id="d-loc" type="text" placeholder="Bandung" />
+              </div>
+              <div class="form-group">
+                <label for="d-actor">Aktor (Pengguna)</label>
+                <select id="d-actor">
+                  <option value="">— Pilih Pengguna —</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-success btn-lg" id="btn-add-drug" style="width:100%">
+                ⛓️ Daftarkan & Buat Block
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Daftar obat -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Daftar Obat</h3>
+            <button class="btn btn-ghost btn-sm" onclick="loadDrugs()">🔄 Refresh</button>
+          </div>
+          <div class="card-body" style="padding: 1rem;">
+            <div class="search-wrap mb-2">
+              <span class="search-icon">🔍</span>
+              <input type="text" placeholder="Cari obat..." id="drug-search" oninput="filterDrugs()" />
+            </div>
+            <div id="drug-list" class="drug-list">
+              <div class="empty-state"><div class="empty-icon">💊</div><h3>Belum ada obat</h3><p>Tambahkan obat pertama di sebelah kiri</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Riwayat obat -->
+      <div class="card mt-3" id="drug-history-card" style="display:none;">
+        <div class="card-header">
+          <h3 id="drug-history-title">📦 Riwayat Distribusi</h3>
+          <button class="btn btn-outline btn-sm" onclick="closeDrugHistory()">✕ Tutup</button>
+        </div>
+        <div class="card-body">
+          <div id="drug-history-content"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: TRANSAKSI (PER BATCH / MULTI-OBAT)
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-transactions">
+      <div class="page-header">
+        <h1>🔄 Catat Transaksi Distribusi</h1>
+        <p>Pilih satu atau beberapa batch sekaligus untuk mencatat transaksi dalam rantai pasok</p>
+      </div>
+
+      <div class="grid-2">
+        <!-- Form transaksi per batch -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📦 Form Transaksi Batch</h3>
+            <span class="badge badge-shipped" id="selected-batch-count">0 Batch Dipilih</span>
+          </div>
+          <div class="card-body">
+            <form id="form-add-tx" onsubmit="submitAddTx(event)">
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                  <label style="margin:0;">Pilih Batch / Obat *</label>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="toggleSelectAllBatches()" id="btn-select-all-batches" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
+                    ☑️ Pilih Semua Batch
+                  </button>
+                </div>
+                <div id="tx-batch-container" class="batch-selector-box">
+                  <div class="empty-state" style="padding:1rem;"><span class="spinner"></span> Memuat daftar batch...</div>
+                </div>
+                <!-- Fallback select if needed -->
+                <select id="tx-drug" class="hidden">
+                  <option value="">— Pilih Obat —</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="tx-action">Jenis Aksi (Status Distribusi) *</label>
+                <select id="tx-action" required>
+                  <option value="">— Pilih Aksi —</option>
+                  <option value="SHIPPED">🚚 SHIPPED — Dikirim oleh Produsen / Distributor</option>
+                  <option value="RECEIVED">📥 RECEIVED — Diterima oleh Distributor / Apotek</option>
+                  <option value="DISTRIBUTED">📦 DISTRIBUTED — Didistribusikan ke Apotek</option>
+                  <option value="DISPENSED">💊 DISPENSED — Diserahkan kepada Pasien</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="tx-actor">Aktor / Pelaku Transaksi *</label>
+                <select id="tx-actor" required>
+                  <option value="">— Pilih Pengguna / Organisasi —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="tx-loc">Lokasi Kejadian</label>
+                <input id="tx-loc" type="text" placeholder="misal: Gudang Distribusi Jakarta / Apotek Sehat" />
+              </div>
+              <div class="form-group">
+                <label for="tx-notes">Catatan Transaksi</label>
+                <textarea id="tx-notes" placeholder="Catatan inspeksi fisik, nomor resi pengiriman, kondisi batch..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg" id="btn-add-tx" style="width:100%">
+                ⛓️ Catat & Buat Block (Batch)
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Hasil transaksi terakhir -->
+        <div class="card">
+          <div class="card-header">
+            <h3>⛓️ Block Terakhir Ditambahkan</h3>
+          </div>
+          <div class="card-body">
+            <div id="last-block-result">
+              <div class="empty-state"><div class="empty-icon">⛓️</div><h3>Belum ada transaksi</h3><p>Buat transaksi untuk melihat block baru yang dihasilkan</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: TRACING (PRODUKSI HINGGA PASIEN)
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-tracing">
+      <div class="page-header">
+        <h1>🔎 Tracing Perjalanan Obat (Produksi → Pasien)</h1>
+        <p>Lacak rekam jejak lengkap dan validasi integritas blockchain untuk setiap batch obat</p>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+              <label for="trace-select" style="font-weight:700; font-size:0.8rem; display:block; margin-bottom:0.4rem; color:var(--text-secondary);">PILIH KODE OBAT / BATCH UNTUK DILACAK</label>
+              <select id="trace-select" onchange="onTraceSelectChange()" style="width:100%; padding:0.65rem 0.9rem; font-size:0.9rem; border-radius:var(--radius); border:1px solid var(--border);">
+                <option value="">— Pilih Obat / Batch —</option>
+              </select>
+            </div>
+            <div style="margin-top:1.4rem;">
+              <button class="btn btn-primary" onclick="searchTrace()">🔎 Lacak Rekam Jejak</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tracing-result-container">
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>Pilih Obat untuk Memulai Tracing</h3>
+          <p>Sistem akan menampilkan visual alur perjalanan dari Produsen → Distributor → Apotek → Pasien beserta validasi blockchain.</p>
+        </div>
+      </div>
+
+      <!-- Tombol Aksi di Bagian Bawah Tracing -->
+      <div class="card mt-3">
+        <div class="card-body" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.1rem 1.4rem;">
+          <div style="font-size:0.85rem; color:var(--text-secondary);">
+            💡 Navigasi Cepat Tracing & Blockchain:
+          </div>
+          <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+              ⬆️ Ke Atas
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('transactions')">
+              🔄 Catat Transaksi Batch
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="navigate('explorer')">
+              🔍 Blockchain Explorer
+            </button>
+            <button class="btn btn-success btn-sm" onclick="navigate('verify')">
+              ✅ Verifikasi Chain
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: BLOCKCHAIN EXPLORER
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-explorer">
+      <div class="page-header">
+        <h1>🔍 Blockchain Explorer</h1>
+        <p>Jelajahi setiap block dalam rantai blockchain</p>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+            <div><div style="font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:0.2rem;">Total Block</div><div style="font-size:1.5rem;font-weight:800;" id="explorer-total-blocks">—</div></div>
+            <div><div style="font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:0.2rem;">Difficulty</div><div style="font-size:1.5rem;font-weight:800;color:var(--accent-orange);" id="explorer-difficulty">—</div></div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:0.75rem;">
+            <button class="btn btn-ghost btn-sm" onclick="loadExplorer()">🔄 Refresh</button>
+            <button class="btn btn-outline btn-sm" onclick="navigate('verify')">✅ Verify</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="blockchain-chain" class="blockchain-chain">
+        <div class="empty-state"><div class="empty-icon">⛓️</div><h3>Memuat blockchain...</h3></div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: VERIFIKASI
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-verify">
+      <div class="page-header">
+        <h1>✅ Verifikasi Blockchain</h1>
+        <p>Periksa integritas seluruh chain</p>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="verify-panel">
+            <div class="verify-icon" id="verify-icon">🔍</div>
+            <div class="verify-status" id="verify-status">Belum Diverifikasi</div>
+            <div class="verify-message" id="verify-message">Klik tombol Verifikasi untuk memeriksa integritas blockchain</div>
+
+            <div class="verify-details" id="verify-details" style="display:none;">
+              <div class="verify-detail">
+                <div class="vd-label">Total Block</div>
+                <div class="vd-value" id="vd-blocks">—</div>
+              </div>
+              <div class="verify-detail">
+                <div class="vd-label">Block Bermasalah</div>
+                <div class="vd-value" id="vd-invalid-at">—</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-lg" onclick="runVerify()" id="btn-verify">
+                🔍 Verifikasi Blockchain
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="navigate('explorer')">🔗 Lihat Explorer</button>
+            </div>
+          </div>
+
+          <!-- Penjelasan edukasi -->
+          <div style="margin-top:2rem;">
+            <div class="section-title">📚 Cara Kerja Verifikasi</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+              <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+                <div style="font-size:1.5rem;margin-bottom:0.5rem;">1️⃣</div>
+                <div style="font-weight:700;margin-bottom:0.25rem;font-size:0.9rem;">Hitung Ulang Hash</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">Setiap block di-hash ulang dan dibandingkan dengan hash yang tersimpan</div>
+              </div>
+              <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+                <div style="font-size:1.5rem;margin-bottom:0.5rem;">2️⃣</div>
+                <div style="font-weight:700;margin-bottom:0.25rem;font-size:0.9rem;">Cek Previous Hash</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">previousHash setiap block harus sama dengan hash block sebelumnya</div>
+              </div>
+              <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+                <div style="font-size:1.5rem;margin-bottom:0.5rem;">3️⃣</div>
+                <div style="font-weight:700;margin-bottom:0.25rem;font-size:0.9rem;">Hasil</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">Jika semua valid → ✅ Valid. Jika ada manipulasi → ✗ Invalid</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: DEMO TAMPER
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-tamper">
+      <div class="page-header">
+        <h1>⚠️ Demo Tamper — Simulasi Serangan</h1>
+        <p>Eksperimen untuk memahami konsep tamper evidence dalam blockchain</p>
+      </div>
+
+      <div class="tamper-warning">
+        <span class="tw-icon">🎓</span>
+        <div class="tw-text">
+          <h4>Fitur Pembelajaran</h4>
+          <p>Fitur ini hanya untuk tujuan edukasi. Anda dapat memanipulasi data block untuk melihat bagaimana blockchain mendeteksi perubahan. Setelah selesai, klik <strong>Restore</strong> untuk mengembalikan data asli.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Form tamper -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🔧 Manipulasi Data Block</h3>
+          </div>
+          <div class="card-body">
+            <form id="form-tamper" onsubmit="submitTamper(event)">
+              <div class="form-group">
+                <label for="tamper-block-idx">Index Block yang Akan Dimanipulasi *</label>
+                <input id="tamper-block-idx" type="number" min="1" placeholder="1" required />
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">Block 0 adalah genesis block, tidak dapat dimanipulasi. Mulai dari block 1.</div>
+              </div>
+              <div class="form-group">
+                <label for="tamper-action">Ubah Action menjadi</label>
+                <select id="tamper-action">
+                  <option value="HACKED">HACKED</option>
+                  <option value="DISPENSED">DISPENSED</option>
+                  <option value="FAKE_DATA">FAKE_DATA</option>
+                  <option value="MANUFACTURED">MANUFACTURED</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="tamper-actor">Ubah Aktor menjadi</label>
+                <input id="tamper-actor" type="text" placeholder="Hacker" />
+              </div>
+              <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-danger" id="btn-tamper">
+                  💥 Manipulasi Block
+                </button>
+                <button type="button" class="btn btn-success" onclick="restoreChain()" id="btn-restore">
+                  🔄 Restore Blockchain
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Hasil tamper -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📊 Hasil Eksperimen</h3>
+          </div>
+          <div class="card-body">
+            <div id="tamper-result">
+              <div class="empty-state">
+                <div class="empty-icon">🔬</div>
+                <h3>Belum ada eksperimen</h3>
+                <p>Lakukan manipulasi block, lalu klik Verifikasi untuk melihat hasilnya</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skenario langkah demi langkah -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h3>📖 Panduan Skenario Eksperimen</h3>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+            <div style="background:rgba(79,172,254,0.06);border:1px solid rgba(79,172,254,0.15);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);margin-bottom:0.5rem;">Langkah 1</div>
+              <p style="font-size:0.82rem;color:var(--text-secondary);">Buka halaman <strong>Verifikasi</strong> dan konfirmasi blockchain valid ✅</p>
+            </div>
+            <div style="background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.15);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-red);margin-bottom:0.5rem;">Langkah 2</div>
+              <p style="font-size:0.82rem;color:var(--text-secondary);">Kembali ke halaman ini, pilih block dan manipulasi datanya 💥</p>
+            </div>
+            <div style="background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.15);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-orange);margin-bottom:0.5rem;">Langkah 3</div>
+              <p style="font-size:0.82rem;color:var(--text-secondary);">Kembali ke <strong>Verifikasi</strong> dan lihat hasilnya — blockchain menjadi invalid ✗</p>
+            </div>
+            <div style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-green);margin-bottom:0.5rem;">Langkah 4</div>
+              <p style="font-size:0.82rem;color:var(--text-secondary);">Klik <strong>Restore</strong> untuk mengembalikan chain ke kondisi valid 🔄</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: SMART CONTRACT
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-contract">
+      <div class="page-header">
+        <h1>📜 Smart Contract Solidity</h1>
+        <p>Contoh implementasi smart contract untuk referensi pembelajaran</p>
+      </div>
+
+      <div style="background:rgba(243,156,18,0.07);border:1px solid rgba(243,156,18,0.2);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;gap:0.75rem;align-items:flex-start;">
+        <span style="font-size:1.2rem;">📌</span>
+        <div>
+          <div style="font-weight:700;color:var(--accent-orange);margin-bottom:0.2rem;">Catatan Pembelajaran</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);">Smart contract di bawah ini <strong>tidak digunakan</strong> dalam simulasi utama. Tujuannya adalah memperkenalkan konsep Solidity dan Ethereum, serta perbandingannya dengan custom blockchain berbasis Node.js yang digunakan dalam simulasi ini.</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Kode Solidity -->
+        <div class="col-span-2">
+          <div class="contract-code">
+            <div class="contract-code-header">
+              <div class="code-dots">
+                <div class="code-dot red"></div>
+                <div class="code-dot yellow"></div>
+                <div class="code-dot green"></div>
+              </div>
+              <div class="file-name">📄 contracts/HealthcareDrugTracking.sol</div>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="copyContract()">📋 Salin Kode</button>
+            </div>
+            <pre class="solidity" id="solidity-code"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perbandingan Custom vs Solidity -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h3>⚖️ Perbandingan: Custom Blockchain vs Solidity / Ethereum</h3>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap comparison-table-wrap">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Aspek</th>
+                  <th>⚙️ Simulasi Custom (Node.js)</th>
+                  <th>🔷 Solidity / Ethereum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Bahasa</td><td>JavaScript</td><td>Solidity</td></tr>
+                <tr><td>Blockchain</td><td>Dibuat sendiri</td><td>Ethereum Network</td></tr>
+                <tr><td>Database Aplikasi</td><td>SQLite</td><td>Off-chain Database</td></tr>
+                <tr><td>Konsensus</td><td>Simulasi PoW sederhana</td><td>Proof of Stake (PoS)</td></tr>
+                <tr><td>Smart Contract</td><td>Tidak wajib</td><td>Ya (bahasa Solidity)</td></tr>
+                <tr><td>Gas Fee</td><td>Tidak ada</td><td>Ada (ETH)</td></tr>
+                <tr><td>Jumlah Node</td><td>Satu server simulasi</td><td>Ribuan node global</td></tr>
+                <tr><td>Desentralisasi</td><td>Terpusat (1 server)</td><td>Terdesentralisasi</td></tr>
+                <tr><td>Kecepatan Setup</td><td>Sangat cepat</td><td>Perlu node/testnet</td></tr>
+                <tr><td>Tujuan</td><td>Pembelajaran lokal</td><td>Implementasi produksi</td></tr>
+                <tr><td>Cocok Untuk</td><td>Praktikum mahasiswa</td><td>DApp production</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pertanyaan Diskusi -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h3>💬 Pertanyaan Diskusi Mahasiswa</h3>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 1</div>
+              <div style="font-size:0.9rem;">Mengapa data transaksi perlu diberi hash?</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 2</div>
+              <div style="font-size:0.9rem;">Apa yang terjadi jika data pada Block 2 diubah?</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 3</div>
+              <div style="font-size:0.9rem;">Mengapa blockchain membutuhkan previous hash?</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 4</div>
+              <div style="font-size:0.9rem;">Apa perbedaan blockchain dengan SQLite?</div>
+            </div>
+            <div style="background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-red);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 5 ⚠️</div>
+              <div style="font-size:0.9rem;margin-bottom:0.5rem;">Apakah blockchain menjamin data yang dimasukkan selalu benar?</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);font-style:italic;">Jawaban penting: <strong style="color:var(--accent-red);">Tidak.</strong> Blockchain dapat menjaga integritas record setelah dicatat, tetapi tidak otomatis menjamin kebenaran data pada saat pertama kali dimasukkan (GIGO — Garbage In, Garbage Out).</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 6</div>
+              <div style="font-size:0.9rem;">Mengapa data pasien tidak sebaiknya langsung dimasukkan ke public blockchain?</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 7</div>
+              <div style="font-size:0.9rem;">Apa keuntungan menggunakan smart contract dibandingkan custom blockchain?</div>
+            </div>
+            <div style="background:rgba(5,11,20,0.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+              <div style="font-weight:700;color:var(--accent-blue);font-size:0.85rem;margin-bottom:0.3rem;">Pertanyaan 8</div>
+              <div style="font-size:0.9rem;">Apa perbedaan custom blockchain dengan Ethereum?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         PAGE: PENJELASAN MATERI
+    ──────────────────────────────────────────────────────────────────────── -->
+    <section class="page" id="page-penjelasan">
+      <div class="page-header">
+        <h1>📚 Modul Edukasi & Konsep Blockchain</h1>
+        <p>Panduan visual interaktif konsep pelacakan (tracing) obat berbasis blockchain</p>
+      </div>
+      
+      <!-- Feature Banner -->
+      <div class="card mb-3" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; border: 1px solid #334155;">
+        <div class="card-body" style="padding: 1.5rem 1.75rem;">
+          <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+            <div style="font-size: 2.5rem; background: rgba(255,255,255,0.08); width: 60px; height: 60px; border-radius: 14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">💡</div>
+            <div style="flex:1; min-width: 250px;">
+              <h3 style="font-size: 1.15rem; font-weight:800; margin-bottom: 0.2rem; color: #fff;">Pusat Pengetahuan Simulasi</h3>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Pahami bagaimana rantai pasok obat dipantau secara transparan, akurat per-batch, dan bebas manipulasi.</p>
+            </div>
+            <div>
+              <button class="btn btn-primary" onclick="navigate('tracing')">🔎 Langsung Uji Tracing →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body markdown-body" id="penjelasan-content" style="font-size: 0.95rem; line-height: 1.7; padding: 2rem;">
+          <div class="empty-state"><div class="spinner" style="width:40px;height:40px;border-width:3px;"></div><p style="margin-top:1rem;">Memuat materi penjelasan...</p></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Modal: Detail Block -->
+<div class="modal-overlay hidden" id="modal-block" onclick="closeModal('modal-block')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="modal-block-title">Detail Block</h3>
+      <button class="modal-close" onclick="closeModal('modal-block')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-block-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

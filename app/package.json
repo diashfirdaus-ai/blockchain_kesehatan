@@ -1,0 +1,19 @@
+{
+  "name": "healthcare-blockchain",
+  "version": "1.0.0",
+  "description": "Simulasi Aplikasi Blockchain di Bidang Kesehatan - Sistem Pencatatan dan Verifikasi Riwayat Distribusi Obat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "sql.js": "^1.12.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "keywords": ["blockchain", "healthcare", "sqlite", "education"],
+  "author": "Pembelajaran Mahasiswa",
+  "license": "MIT"
+}
