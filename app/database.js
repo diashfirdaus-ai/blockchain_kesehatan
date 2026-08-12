@@ -94,7 +94,12 @@ async function initDatabase() {
     const dbFolder = path.dirname(DB_PATH);
     if (!fs.existsSync(dbFolder)) fs.mkdirSync(dbFolder, { recursive: true });
 
-    _sqlJs = await initSqlJs();
+    const locateFile = file => path.join(path.dirname(require.resolve("sql.js")), file);
+    try {
+        _sqlJs = await initSqlJs({ locateFile });
+    } catch (_) {
+        _sqlJs = await initSqlJs();
+    }
 
     // Load database yang sudah ada, atau buat baru
     if (fs.existsSync(DB_PATH)) {
