@@ -39,8 +39,8 @@ app.use(async (req, res, next) => {
     }
 });
 
-// Penjelasan Materi
-app.get("/api/penjelasan", (req, res) => {
+// Penjelasan Materi (dukung baik dengan maupun tanpa prefix /api)
+app.get(["/api/penjelasan", "/penjelasan"], (req, res) => {
     const mdPath = path.join(__dirname, "..", "penjelasan.md");
     if (fs.existsSync(mdPath)) {
         res.sendFile(mdPath);
@@ -49,8 +49,8 @@ app.get("/api/penjelasan", (req, res) => {
     }
 });
 
-// Reset route
-app.post("/api/simulation/reset", (req, res) => {
+// Reset route (dukung baik dengan maupun tanpa prefix /api)
+app.post(["/api/simulation/reset", "/simulation/reset"], (req, res) => {
     try {
         const db = req.app.locals.db;
         const bc = req.app.locals.blockchain;
@@ -71,13 +71,17 @@ app.post("/api/simulation/reset", (req, res) => {
     }
 });
 
-// Sub-routes
-app.use("/api/users", require("../app/routes/users"));
-app.use("/api/drugs", require("../app/routes/drugs"));
-app.use("/api/blockchain", require("../app/routes/blockchain"));
+// Sub-routes (dukung baik dengan maupun tanpa prefix /api)
+const usersRouter = require("../app/routes/users");
+const drugsRouter = require("../app/routes/drugs");
+const blockchainRouter = require("../app/routes/blockchain");
+
+app.use(["/api/users", "/users"], usersRouter);
+app.use(["/api/drugs", "/drugs"], drugsRouter);
+app.use(["/api/blockchain", "/blockchain"], blockchainRouter);
 
 // Root API
-app.get("/api", (req, res) => {
+app.get(["/api", "/"], (req, res) => {
     res.json({
         message: "Healthcare Blockchain API",
         version: "1.0.0"
