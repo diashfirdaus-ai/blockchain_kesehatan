@@ -13,7 +13,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-let dbReady = false;
+// ─── Serve static files dari app/public ────────────────────────────────────
+app.use(express.static(path.join(__dirname, "../app/public")));
+
 let dbPromise = null;
 
 async function setupApp() {
@@ -22,31 +24,29 @@ async function setupApp() {
             const bc = new Blockchain(db);
             app.locals.db = db;
             app.locals.blockchain = bc;
-            dbReady = true;
         });
     }
     return dbPromise;
 }
 
-// ─── Init DB saat startup (bukan saat request) ───────────────────────────────
-setupApp().catch(err => console.error("[STARTUP ERROR]", err));
+setupApp().catch(err => console.error("[STARTUP ERROR]", err.message));
 
-// ─── Middleware: Tunggu DB siap ───────────────────────────────────────────────
+// ─── Middleware: Tunggu DB siap ─────────────────────────────────────────────
 app.use(async (req, res, next) => {
     try {
         await dbPromise;
         next();
     } catch (err) {
-        res.status(500).json({ success: false, message: "Database tidak siap: " + err.message });
+        res.status(500).json({ success: false, message: "Database error: " + err.message });
     }
 });
 
-// ─── Test endpoint ────────────────────────────────────────────────────────────
+// ─── Health Check ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
-    res.json({ success: true, status: "ok", dbReady });
+    res.json({ success: true, status: "ok", timestamp: new Date().toISOString() });
 });
 
-// ─── Penjelasan Materi ─────────────────────────────────────────────────────
+// ─── Penjelasan Materi ──────────────────────────────────────────────────────
 app.get("/api/penjelasan", (req, res) => {
     const mdPath = path.join(__dirname, "..", "penjelasan.md");
     if (fs.existsSync(mdPath)) {
@@ -56,7 +56,7 @@ app.get("/api/penjelasan", (req, res) => {
     }
 });
 
-// ─── Reset Simulation ─────────────────────────────────────────────────────
+// ─── Reset Simulation ───────────────────────────────────────────────────────
 app.post("/api/simulation/reset", (req, res) => {
     try {
         const db = app.locals.db;
@@ -71,12 +71,17 @@ app.post("/api/simulation/reset", (req, res) => {
     }
 });
 
-// ─── Sub-routes ───────────────────────────────────────────────────────────
+// ─── API Sub-routes ─────────────────────────────────────────────────────────
 app.use("/api/users", require("../app/routes/users"));
 app.use("/api/drugs", require("../app/routes/drugs"));
 app.use("/api/blockchain", require("../app/routes/blockchain"));
 
-// ─── Error handler ────────────────────────────────────────────────────────
+// ─── Fallback: Semua route non-API dan non-static → index.html ──────────────
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../app/public/index.html"));
+});
+
+// ─── Error Handler ──────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
     console.error("[ERROR]", err.stack);
     res.status(500).json({ success: false, message: err.message });
