@@ -1,18 +1,30 @@
 {
   "version": 2,
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "node_modules/sql.js/dist/sql-wasm.wasm,penjelasan.md,app/public/**"
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
+      "src": "api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "app/**",
+          "penjelasan.md",
+          "node_modules/sql.js/dist/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/app/public/$1"
+      "src": "/(.*\\.(?:js|css|ico|png|jpg|jpeg|svg|woff2?|ttf))",
+      "dest": "/app/public/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/app/public/index.html"
     }
   ]
 }

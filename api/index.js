@@ -13,41 +13,40 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+let dbReady = false;
 let dbPromise = null;
-let blockchainInstance = null;
 
 async function setupApp() {
     if (!dbPromise) {
-        dbPromise = (async () => {
-            const db = await initDatabase();
-            blockchainInstance = new Blockchain(db);
+        dbPromise = initDatabase().then(db => {
+            const bc = new Blockchain(db);
             app.locals.db = db;
-            app.locals.blockchain = blockchainInstance;
-        })();
+            app.locals.blockchain = bc;
+            dbReady = true;
+        });
     }
-    await dbPromise;
+    return dbPromise;
 }
 
-// Middleware inisialisasi DB & Blockchain
+// ─── Init DB saat startup (bukan saat request) ───────────────────────────────
+setupApp().catch(err => console.error("[STARTUP ERROR]", err));
+
+// ─── Middleware: Tunggu DB siap ───────────────────────────────────────────────
 app.use(async (req, res, next) => {
     try {
-        await setupApp();
+        await dbPromise;
         next();
     } catch (err) {
-        console.error("[Vercel DB Error]", err);
-        next(err);
+        res.status(500).json({ success: false, message: "Database tidak siap: " + err.message });
     }
 });
 
-// URL Normalization Middleware — Menjamin req.url selalu ber-prefix /api di Vercel
-app.use((req, res, next) => {
-    if (!req.url.startsWith("/api")) {
-        req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
-    }
-    next();
+// ─── Test endpoint ────────────────────────────────────────────────────────────
+app.get("/api/health", (req, res) => {
+    res.json({ success: true, status: "ok", dbReady });
 });
 
-// Penjelasan Materi
+// ─── Penjelasan Materi ─────────────────────────────────────────────────────
 app.get("/api/penjelasan", (req, res) => {
     const mdPath = path.join(__dirname, "..", "penjelasan.md");
     if (fs.existsSync(mdPath)) {
@@ -57,49 +56,30 @@ app.get("/api/penjelasan", (req, res) => {
     }
 });
 
-// Reset route
+// ─── Reset Simulation ─────────────────────────────────────────────────────
 app.post("/api/simulation/reset", (req, res) => {
     try {
-        const db = req.app.locals.db;
-        const bc = req.app.locals.blockchain;
-
+        const db = app.locals.db;
+        const bc = app.locals.blockchain;
         db.prepare("DELETE FROM drug_transactions").run();
         db.prepare("DELETE FROM drugs").run();
         db.prepare("DELETE FROM blockchain_blocks WHERE block_index > 0").run();
-
         bc.restoreChain();
-
-        res.json({
-            success: true,
-            message: "Semua data simulasi berhasil dihapus. Blockchain dikembalikan ke genesis block.",
-            genesisOnly: true,
-        });
+        res.json({ success: true, message: "Data simulasi berhasil dihapus." });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// Sub-routes
-const usersRouter = require("../app/routes/users");
-const drugsRouter = require("../app/routes/drugs");
-const blockchainRouter = require("../app/routes/blockchain");
+// ─── Sub-routes ───────────────────────────────────────────────────────────
+app.use("/api/users", require("../app/routes/users"));
+app.use("/api/drugs", require("../app/routes/drugs"));
+app.use("/api/blockchain", require("../app/routes/blockchain"));
 
-app.use("/api/users", usersRouter);
-app.use("/api/drugs", drugsRouter);
-app.use("/api/blockchain", blockchainRouter);
-
-// Root API
-app.get("/api", (req, res) => {
-    res.json({
-        message: "Healthcare Blockchain API",
-        version: "1.0.0"
-    });
-});
-
-// Error handler
+// ─── Error handler ────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-    console.error("[Vercel Handler Error]", err.stack);
-    res.status(500).json({ success: false, message: "Internal server error", error: err.message });
+    console.error("[ERROR]", err.stack);
+    res.status(500).json({ success: false, message: err.message });
 });
 
 module.exports = app;
