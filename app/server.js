@@ -22,11 +22,13 @@ async function startServer() {
     // Static files (frontend)
     app.use(express.static(path.join(__dirname, "public")));
 
-    // ─── Pastikan folder database ada ──────────────────────────────────────────
-    const dbFolder = path.join(__dirname, "database");
-    if (!fs.existsSync(dbFolder)) {
-        fs.mkdirSync(dbFolder, { recursive: true });
-    }
+    // ─── Pastikan folder database ada (Safe for Vercel) ────────────────────────
+    try {
+        const dbFolder = path.join(__dirname, "database");
+        if (!fs.existsSync(dbFolder)) {
+            fs.mkdirSync(dbFolder, { recursive: true });
+        }
+    } catch (_) {}
 
     // ─── Inisialisasi Database ──────────────────────────────────────────────────
     console.log("=".repeat(60));

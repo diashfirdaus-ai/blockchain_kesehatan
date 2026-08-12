@@ -178,10 +178,17 @@ async function loadPenjelasanPage() {
 // ─── Fetch Helper ──────────────────────────────────────────────────────────────
 async function apiFetch(url, options = {}) {
   try {
-    const res  = await fetch(API + url, {
+    const res = await fetch(API + url, {
       headers: { "Content-Type": "application/json", ...options.headers },
       ...options,
     });
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(`Respons server bukan JSON (HTTP ${res.status}). Rute mungkin belum tersedia.`);
+    }
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Error ${res.status}`);
     return data;

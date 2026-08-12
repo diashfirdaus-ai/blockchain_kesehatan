@@ -2,18 +2,26 @@ const initSqlJs = require("sql.js");
 const path = require("path");
 const fs   = require("fs");
 
-const DB_PATH = path.join(__dirname, "database", "healthcare.db");
+// Gunakan folder /tmp jika berjalan di Vercel (serverless read-only filesystem)
+const DB_PATH = process.env.VERCEL 
+    ? path.join("/tmp", "healthcare.db") 
+    : path.join(__dirname, "database", "healthcare.db");
 
 let _db       = null;
 let _sqlJs    = null;
 
 /**
  * Simpan database ke file (dipanggil setelah setiap write operation).
+ * Dibungkus try-catch agar kegagalan penulisan disk tidak mencabut/mencrash serverless function.
  */
 function saveDb() {
     if (!_db) return;
-    const data = _db.export();
-    fs.writeFileSync(DB_PATH, Buffer.from(data));
+    try {
+        const data = _db.export();
+        fs.writeFileSync(DB_PATH, Buffer.from(data));
+    } catch (err) {
+        console.warn("[DB Warning] Gagal menyimpan DB ke disk (fitur memori tetap aktif):", err.message);
+    }
 }
 
 /**
