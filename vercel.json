@@ -1,21 +1,9 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "app/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "penjelasan.md",
-          "app/public/**"
-        ]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "app/server.js"
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
   ]
 }
